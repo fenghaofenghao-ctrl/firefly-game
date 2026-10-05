@@ -13,10 +13,43 @@
   html,body{margin:0;height:100%;background:#120e1c;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
   canvas{display:block;position:fixed;left:0;top:0;touch-action:none}
 </style>
-<meta name="build" content="09f8c7e 2026-10-05T03:53:47.305Z">
-<script>window.RM_PWA = { sw: 'sw.js', build: '09f8c7e' };</script>
+<meta name="build" content="635861f 2026-10-05T04:06:42.659Z">
+<script>window.RM_PWA = { sw: 'sw.js', build: '635861f' };</script>
 </head>
 <body>
+<div id="yl-boot" style="position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#120e1c;color:#fff2d0;font:600 17px system-ui,sans-serif;text-align:center;padding:16px;box-sizing:border-box"><div style="font:800 26px system-ui,sans-serif;margin-bottom:10px">萤火归途</div><div id="yl-boot-msg">加载中…</div></div>
+<script>(function () {
+  var t0 = Date.now(), shown = false, done = false;
+  function el(id) { return document.getElementById(id); }
+  function hard() {
+    var go = function () { location.replace(location.pathname + '?r=' + Date.now()); };
+    try {
+      var ps = [];
+      if (window.caches) ps.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf('firefly-') === 0; }).map(function (k) { return caches.delete(k); })); }));
+      if (navigator.serviceWorker) ps.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+      Promise.all(ps).then(go, go); setTimeout(go, 3000);
+    } catch (e) { go(); }
+  }
+  function show(why) {
+    if (done || shown) return; shown = true; var b = el('yl-boot'); if (!b) return;
+    el('yl-boot-msg').textContent = why;
+    var btn = document.createElement('button'); btn.id = 'yl-reload'; btn.type = 'button'; btn.textContent = '点此重新加载';
+    btn.style.cssText = 'margin-top:16px;font:700 18px system-ui,sans-serif;padding:12px 22px;border-radius:12px;border:2px solid #b89a5a;background:#3a2c58;color:#fff2d0';
+    btn.onclick = function () { btn.disabled = true; btn.textContent = '正在重新加载…'; hard(); };
+    var note = document.createElement('div'); note.textContent = '（不会清除存档）'; note.style.cssText = 'margin-top:8px;font:13px system-ui,sans-serif;opacity:.7';
+    b.appendChild(btn); b.appendChild(note);
+  }
+  window.RM_BOOT = { reload: hard };
+  window.addEventListener('error', function (e) { if (!done) show('启动出错了：' + ((e && e.message) || '未知错误')); });
+  var iv = setInterval(function () {
+    var G = window.RM && window.RM.Game;
+    if (G && G.scene && G.scene !== 'boot') { done = true; clearInterval(iv); var b = el('yl-boot'); if (b) b.remove(); return; }
+    var dt = Date.now() - t0, loading = document.readyState === 'loading';
+    if (loading && dt > 8000 && !shown) el('yl-boot-msg').textContent = '正在下载游戏…网络慢的时候要等一会儿';
+    if (!loading && dt > 6000) show('启动卡住了');                      // page fully there but the game never started
+    if (dt > 30000) show('下载太慢或者卡住了');
+  }, 250);
+})();</script>
 <canvas id="game"></canvas>
 <script>/* js/util.js */
 /* util.js — small shared helpers (G.U) */
@@ -6082,6 +6115,7 @@ LEVELS.register({
   var last = 0, fpsAcc = 0, fpsN = 0; Game.fps = 60; Game.frameMs = [];
   function frame(ts) {
     requestAnimationFrame(frame);
+    if (window.innerWidth > 0 && window.innerHeight > 0 && (window.innerWidth !== Game.cssW || window.innerHeight !== Game.cssH)) fit();   // launch in fullscreen / landscape on a foldable can settle the size without a resize event
     var t0 = performance.now(), dt = last ? Math.min(0.1, (ts - last) / 1000) : DT; last = ts;
     fpsAcc += dt; fpsN++; if (fpsAcc >= 1) { Game.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
       // adaptive resolution: sustained low fps while playing → smaller backing store (never below 1×)
